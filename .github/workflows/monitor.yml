@@ -1,0 +1,47 @@
+name: Monitor Deportick
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+
+  check:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Revisar entradas
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python bot.py
+
+      - name: Guardar estado
+        run: |
+          git config user.name "deportick-monitor"
+          git config user.email "deportick-monitor@users.noreply.github.com"
+
+          git add state.txt
+
+          git diff --cached --quiet || git commit -m "Actualizar estado"
+
+          git push || true
