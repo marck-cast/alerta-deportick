@@ -30,15 +30,6 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
-      - name: Probar ntfy
-        env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: |
-          curl -H "Title: Prueba Deportick" \
-               -H "Priority: high" \
-               -d "El monitor de entradas funciona correctamente" \
-               "https://ntfy.sh/$NTFY_TOPIC"
-
       - name: Revisar entradas
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
