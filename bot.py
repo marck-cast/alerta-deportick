@@ -37,7 +37,7 @@ QUEUE_PHRASES = [
     "you are now in line",
 ]
 
-NTFY_TOPIC = os.environ["NTFY_TOPIC"]  # viene del secreto de GitHub, sin valor por defecto
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "afa-benin-marco-1609")
 NTFY_SERVER = "https://ntfy.sh"
 
 STATE_FILE = "state.txt"
