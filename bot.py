@@ -113,11 +113,22 @@ def save_state(state, path=STATE_FILE):
         file.write(state)
 
 
-def detect_queue(final_url, text):
-    """Devuelve (activa, motivo). Dos señales:
-    1) la pagina te llevo a otro sitio o a otra direccion (tipico de una sala de espera)
-    2) aparece texto de fila virtual y NO se ven los sectores del evento
+def detect_queue(final_url, text, nav_urls=None, queue_requests=None):
+    """Devuelve (activa, motivo). Señales, de mas a menos segura:
+    1) la pagina cargo algo desde queue-it.net (redireccion o ventana de fila)
+    2) la direccion final es de otro sitio, o de otra ruta que no es la del evento
+    3) aparece texto de fila virtual y NO se ven los sectores del evento
     """
+    for u in (queue_requests or []):
+        return True, "la pagina cargo la fila de Queue-it"
+
+    for u in (nav_urls or []):
+        if "queue-it.net" in (u or "").lower():
+            return True, "la pagina paso por la fila de Queue-it"
+
+    if "queueittoken" in (final_url or "").lower():
+        return True, "la pagina volvio de la fila de Queue-it"
+
     parsed = urlparse(final_url or "")
     host = parsed.netloc.lower()
 
@@ -222,6 +233,26 @@ def main():
             }
         )
 
+        nav_urls = []
+        queue_requests = []
+
+        def on_navigated(frame):
+            if frame == page.main_frame:
+                nav_urls.append(frame.url)
+
+        def on_request(request):
+            try:
+                if (
+                    request.resource_type == "document"
+                    and "queue-it.net" in request.url.lower()
+                ):
+                    queue_requests.append(request.url)
+            except Exception:
+                pass
+
+        page.on("framenavigated", on_navigated)
+        page.on("request", on_request)
+
         try:
 
             page.goto(
@@ -246,10 +277,14 @@ def main():
             body_text = ""
 
         print("Direccion final:", page.url)
+        print("Paginas visitadas:", nav_urls)
+        print("Pedidos a queue-it.net:", queue_requests)
         print("Caracteres de texto en pantalla:", len(body_text))
         print("Inicio del texto:", normalize(body_text)[:200])
 
-        queue_active, queue_reason = detect_queue(page.url, body_text)
+        queue_active, queue_reason = detect_queue(
+            page.url, body_text, nav_urls, queue_requests
+        )
         previous_queue = load_state(QUEUE_STATE_FILE)
 
         if queue_active:
